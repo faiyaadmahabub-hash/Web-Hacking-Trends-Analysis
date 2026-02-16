@@ -1,0 +1,588 @@
+---
+title: "Country Cleaning And EDA"
+author: "Faiyad Mahabub Tasin"
+date: "2025-02-12"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Libraries
+
+```{r, echo=FALSE}
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(remotes)
+library(rgeolocate)
+library(ggplot2)
+library(ggrepel)
+library(scales)
+library(reshape2)
+library(ggcorrplot)
+library(moments)
+```
+
+# Importing The Dataset
+
+```{r}
+setwd("C:/Asia Pacific University/All Module Notes/Semister-3/Programming For Data Analysis/Assignment/Assignment")
+
+country_raw <- read.csv("Clean_Loss_Data.csv")
+view(country_raw)
+```
+
+# Inspecting "Country" Column
+
+```{r}
+view(country_raw$Country)
+unique(country_raw$Country)
+```
+
+
+# Standardize Text Formatting Removing Extra Spaces convert it to title case.
+
+```{r}
+
+country_clean <- country_raw %>%
+  mutate(Country = str_to_title(str_trim(Country)))
+
+# Checking Country Column
+unique(country_clean$Country)
+```
+
+
+
+
+
+# Correcting Common Misspelling
+
+```{r}
+country_clean <- country_clean %>%
+  mutate(Country = case_when(
+    Country %in% c("Usa", "U.s.a.", "United State") ~ "United States",
+    Country %in% c("Uk", "United Kingd") ~ "United Kingdom",
+    Country %in% c("South Korea", "Korea, Repub") ~ "South Korea",
+    Country %in% c("North Korea", "Korea, Democratic") ~ "North Korea",
+    Country %in% c("Russia", "Russian Fede", "Russian Federation") ~ "Russia",
+    Country %in% c("Czech Republ", "Czech Republic") ~ "Czechia",
+    Country %in% c("Taiwan, Prov", "Taiwan") ~ "Taiwan",
+    Country %in% c("Iran, Islami") ~ "Iran",
+    Country %in% c("Saudiarabia", "Saudi Arabia") ~ "Saudi Arabia",
+    Country %in% c("Vaticancitystate") ~ "Vatican City State",
+    Country %in% c("Srilanka", "Sri Lanka") ~ "Sri Lanka",
+    Country %in% c("Puertorico", "Puerto Rico") ~ "Puerto Rico",
+    Country %in% c("Newzealand", "New Zealand\"") ~ "New Zealand",
+    Country %in% c("Europe", "Westeuro", "Easteuro") ~ "Europe",
+    Country %in% c("Southamerica") ~ "South America",
+    Country %in% c("Middleeast") ~ "Middle East",
+    Country %in% c("Oseania") ~ "Oceania",
+    Country %in% c("Cote D'ivoire") ~ "Ivory Coast",
+    Country %in% c("Libyanarabjamahiriya") ~ "Libya",
+    Country %in% c("Bruneidarussalam") ~ "Brunei",
+    Country %in% c("Macau") ~ "Macau (China)",
+    Country %in% c("Hong Kong") ~ "Hong Kong (China)",
+    Country %in% c("Americansamoa") ~ "American Samoa",
+    Country %in% c("United Arabemirates") ~ "United Arab Emirates",
+    Country %in% c("Turksandcaicosislands") ~ "Turks and Caicos Islands",
+    Country %in% c("Norfolkisland") ~ "Norfolk Island",
+    Country %in% c("Netherlands\"", "Netherlands") ~ "Netherlands",
+    Country %in% c("Anonymous Proxy") ~ "Unknown",
+    Country %in% c("Ascensionisland") ~ "Ascension island",
+    Country %in% c("Virginislands(U.s.)") ~ "Virgin Islands (U.S.A)",
+    Country %in% c("Netherlandsantilles") ~ "Netherlands Antilles",
+    Country %in% c("Saintkittsnevis") ~ "Saint Kitts and Nevis",
+    Country %in% c("Asia/Pacific Region") ~ "Asia-Pacific Region",
+    Country %in% c("Asia/Pacific Region") ~ "Asia-Pacific Region",
+    Country %in% c("Satellite Provider") ~ "Unknown",
+    Country %in% c("Viet Nam") ~ "Vietnam",
+    Country %in% c("French Polyn") ~ "French Polynesia",
+    Country %in% c("Cayman Islan") ~ "Cayman Islands",
+    Country %in% c("New Caledoni") ~ "New Caledonia",
+    Country %in% c("Lao People's Democratic Republic") ~ "Laos",
+    Country %in% c("Easttimor") ~ "Timor-Leste",
+    Country %in% c("Capeverde") ~ "Cape Verde",
+    Country %in% c("Saotomeandprincipe") ~ "São Tomé and Príncipe",
+    Country %in% c("Costarica") ~ "Costa Rica",
+    Country %in% c("Burkinafaso") ~ "Burkina Faso",
+    Country %in% c("Elsalvador") ~ "El Salvador",
+    Country %in% c("Nigeria\"", "Nigeria") ~ "Nigeria" ,
+    Country %in% c("Macedonia, T") ~ "Macedonia" ,
+    Country %in% c("Moldova, Rep") ~ "Moldova, Republic" ,
+    Country %in% c("Virgin Islan") ~ "Virgin Islands" ,
+    Country %in% c("European Uni") ~ "European Union" ,
+    Country %in% c("America") ~ "United States" ,
+    Country %in% c("Ascensionisland", "Ascension island") ~ "Ascension Island" ,
+    Country %in% c("Virgiislands(British)") ~ "Virgin Islands (British)" ,
+    Country %in% c("Virginislands(U.S.A)") ~ "Virgin Islands(U.S.A)" ,
+    Country %in% c("Moldova, Republic") ~ "Moldova Republic" ,
+    TRUE ~ Country  # Keep others as they are
+  ))
+
+unique(country_clean$Country)
+```
+
+
+
+
+# Imputation Of Country using IP address.
+
+## Checking IP addresses
+
+```{r}
+unique(country_clean$IP)
+```
+
+
+## Inserting "Unknowns" for both IP addresses and Country.
+
+```{r}
+
+country_clean$IP[country_clean$IP == ""] <- "Unknown"
+country_clean$Country[is.na(country_clean$Country)] <- "Unknown"
+
+# Counting "Unknown" in country column
+sum(country_clean$Country == "Unknown")
+
+unique(country_clean$IP)
+
+```
+
+
+
+## Cleaning IP addresses And Formatting The IP addresses in correct order with trimming extra whitespaces
+
+```{r}
+# Remove NA values in the 'IP' column
+country_clean <- country_clean %>% filter(!is.na(IP))
+
+# Trim whitespace
+country_clean$IP <- str_trim(country_clean$IP)
+
+# Remove invalid characters
+country_clean$IP <- str_replace_all(country_clean$IP, "[^0-9.:a-fA-F]", "")
+
+# Define regex patterns for IPv4 and IPv6
+ipv4_pattern <- "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+ipv6_pattern <- "^[a-fA-F0-9]{1,4}(:[a-fA-F0-9]{1,4}){7}$"
+
+# Validate IP addresses
+country_clean$Valid_IP <- str_detect(country_clean$IP, ipv4_pattern) | str_detect(country_clean$IP, ipv6_pattern)
+view(country_clean$I)
+# Extract invalid IPs
+invalid_ips <- country_clean %>% filter(!Valid_IP) %>% select(IP)
+
+# Replace invalid IPs with "0.0.0.0"
+country_clean$IP[!country_clean$Valid_IP] <- "0.0.0.0"
+
+# Seeing newly formatted IP addresses 
+unique(country_clean$IP)
+
+# Checking all column
+summary(country_clean)
+
+# Dropping "Valid IP" from the dataset
+country_clean$Valid_IP <- NULL
+
+# Viewing the dataset
+view(country_clean)
+```
+
+We then format our IP addresses to its proper Ipv4 and Ipv6 where the missing values "Unknowns" are replaced with "0.0.0.0". This is needed for our imputation as it involves using Ip address database called GeoLite2-Country.mmdb from maxmind website that uses the library rgeolocate.
+
+# Imputting Country names using IP address, used maxmind database GeoLite2-Country.mmdb for imputation
+
+```{r}
+
+# Set the path to your GeoLite2 database
+db_path <- "C:/Asia Pacific University/All Module Notes/Semister-3/Programming For Data Analysis/Assignment/GeoLite2-Country.mmdb"  # Change this path based on your system
+
+# Function to get country from IP
+get_country <- function(ip) {
+  result <- maxmind(ip, db_path, fields = "country_name")
+  return(ifelse(is.na(result), "Unknown", result))
+}
+
+# Apply function to "Unknown" country values
+country_clean$Country[country_clean$Country == "Unknown"] <- sapply(country_clean$IP[country_clean$Country == "Unknown"], get_country)
+
+# Checking if the imputation was correct or not 
+sum(country_clean$Country == "Unknown")
+
+
+
+```
+
+It works by checking each ip address from the database in list and matches the ip address in our dataset that has missing values with country column, where we can see the missing values "Unknowns" count reduced to 13394. It reduced about (67311 - 13394) 53,917 missing values. This makes the dataset proper for analysis.
+
+# Checking country column after imputation
+
+Before we move in for analysis part. It is a good practice to check whether the data is in correct format after imputation process.
+
+```{r}
+
+unique(country_clean$Country)
+class(country_clean$Country)
+
+
+```
+
+
+
+# Converting Listed elements to "Characters"
+
+```{r}
+country_clean$Country <- sapply(country_clean$Country, function(x) paste(unlist(x), collapse = ", "))
+country_clean$Country <- as.character(country_clean$Country)  # Ensure it's stored as character
+
+# Checking for Class 
+class(country_clean$Country)
+
+# Checking for country
+unique(country_clean$Country)
+
+# Checking number of "Unknown"
+sum(country_clean$Country == "Unknown")
+
+```
+
+
+
+
+
+
+
+
+# Analysis Question 1: What is the highest and least countries that experienced most of the losses?
+
+## Grouping the Data to get summary statistics
+
+```{r}
+summary_stats <- country_clean %>% group_by(Country) %>% 
+  summarise(Total_Loss = sum(Loss, na.rm = TRUE),
+            Avg_Loss = mean(Loss, na.rm = TRUE),
+            Median_Loss = median(Loss, na.rm = TRUE),
+            Loss_SD = sd(Loss, na.rm = TRUE),
+            Count = n())
+print(summary_stats)
+```
+
+this is used for grouping out the column for easier and effective analysis.
+
+## Identifying countries with High And Low Losses
+
+```{r}
+
+
+# Getting Countries with High Losses.
+top_countries_loss <- summary_stats %>% arrange(desc(Total_Loss)) %>% select(Country, Total_Loss)
+
+# Getting Countries with Low Losses.
+low_countries_loss <- summary_stats %>% arrange(Total_Loss) %>% select(Country, Total_Loss)
+
+# Display
+print(top_countries_loss)
+print(low_countries_loss)
+
+
+
+```
+
+interpret- These are the countries that have High Losses and Low Losses worldwide. Where the highest can be seen for United States and Lowest can be seen for Gambia.
+
+### Visualizing the trend of Losses across top 10 countries.
+
+```{r}
+
+# Grouping top 20 countries 
+summary_stats_top <- summary_stats %>% arrange(desc(Total_Loss)) %>% head(20)
+
+# Visualizing the trend of Losses across 10 countries.
+ggplot(summary_stats_top, aes(x = reorder(Country, - Total_Loss), y = Total_Loss / 1e6)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  ggtitle(paste("Top 20 Countries by Total Loss")) +
+  xlab("Country") +
+  ylab("Total Loss (Millions)") + 
+  scale_y_continuous(labels = label_number(scale = 1, suffix = "M"))
+
+```
+
+interpret - This can be visualized by plotting a bar graph as countries are categorical values with loss as its numeric for better visualization and finding meaningful insights. It showcases how it is changing for top 10 countries with highest is the United States and lowest top is Hungary.
+
+
+
+### Visualizing the trend of Losses across least 10 countries.
+
+```{r}
+
+# Grouping Total Loss for least 20 countries
+top_10_least <- summary_stats %>%
+  arrange(Total_Loss) %>%   
+  slice_head(n = 20) 
+
+# Visualization of loss for least 20 countries 
+ggplot(top_10_least, aes(x = reorder(Country, Total_Loss), y = Total_Loss / 1e3)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Top 20 Countries with Least Total Loss (in Millions)") +
+  xlab("Country") +
+  ylab("Total Loss (Thousand)") +
+  scale_y_continuous(labels = label_number(scale = 1, suffix = "K")) +
+  coord_flip()
+
+
+```
+
+Interpret - This shows a visual representation of how it is changing for the least 10 countries where Gambia is the only country that has lost the least revenue, and Timur-Leste suffered the most revenue loss.
+
+
+
+
+
+
+
+
+
+# Analysis Question 2: Does total revenue loss correlate with frequency of number of attacks?
+
+## Identify Countries with Frequent Loss Incidents using Descriptive Statistics
+
+In order to check whether attack frequency has something to do with the highest and lowest revenue losses. We first see the statistics for their attack frequencies for all countries with highest and lowest losses.
+
+```{r}
+
+# Used to get highest Frequency Attack
+high_incidents <- summary_stats %>% arrange(desc(Count)) %>% head(10) %>% arrange(desc(Total_Loss))%>%
+  select(Country, Count, Total_Loss)
+
+# Used to get largest Average loss for lowest Frequency Attack
+low_incidents_largest <- summary_stats %>% arrange(Count) %>% head(10) %>% arrange(desc(Avg_Loss)) %>%
+  select(Country, Count, Avg_Loss)
+
+# Used to get lowest Average loss for lowest Frequency Attack
+low_incidents_smallest <- summary_stats %>% arrange(Count) %>% head(10) %>% arrange(Avg_Loss) %>%
+  select(Country, Count, Avg_Loss)
+
+# Display
+print(high_incidents)
+print(low_incidents_smallest)
+print(low_incidents_largest)
+
+```
+
+The statistics showed that United states had the highest number of attacks which explains its highest revenue loss. The least attack faced was Gambia which had only one attack. But for other countries such as Netherlands Antilles even though the attack was only one time, they had to suffer quite a large amount of revenue loss.
+
+
+
+
+## Visualization Of Frequency Of Attacks For Top 10 Countries.
+
+```{r}
+
+# Select the top 10 countries by number of attacks
+attack_stats_top <- summary_stats %>% arrange(desc(Count)) %>% head(10)
+
+# Plot: Number of Attacks & Total Loss
+ggplot(attack_stats_top, aes(x = reorder(Country, -Count))) +
+  geom_bar(aes(y = Count), stat = "identity", fill = "firebrick", alpha = 0.7) + 
+  geom_line(aes(y = Total_Loss / 1e6, group = 1), color = "blue", size = 1.2) + 
+  geom_point(aes(y = Total_Loss / 1e6), color = "blue", size = 3) +
+  geom_text(aes(y = Count, label = Count), vjust = -0.5, size = 4) +
+  geom_text(aes(y = Total_Loss / 1e6, label = paste0(round(Total_Loss / 1e6, 1), "M")), 
+            vjust = -0.5, size = 4, color = "blue") + 
+  scale_x_discrete(guide = guide_axis(angle = 30)) + 
+  theme(axis.text.x = element_text(hjust = 1, vjust = 1, size = 10)) + 
+  ggtitle("Top 10 Countries by Number of Attacks & Total Loss") +
+  xlab("Country") +
+  theme_minimal()
+
+
+```
+
+The bar plot visualizes the revenue loss in blue and number of attacks in red for top 10 countries, where United States suffered the highest number of attacks and also suffered total revenue loss. The total revenue loss do not always correlate with number of attacks as Germany and UK has less ,but higher total loss then to unspecified countries which are "Unknowns". These shows that some attacks caused more financial damage then others.
+
+
+
+
+
+
+# Analysis 3: Do certain countries show a consistent pattern of extreme Loss values?
+
+# Identify Outliers using IQR Method
+
+```{r}
+
+# Function For Calculating Outliers for Loss On Each Country
+iqr_outlier_detection <- function(country_clean, country_col, loss_col) {
+  country_clean %>%
+    group_by(!!sym(country_col)) %>%
+    mutate(
+      Q1 = quantile(!!sym(loss_col), 0.25, na.rm = TRUE),
+      Q3 = quantile(!!sym(loss_col), 0.75, na.rm = TRUE),
+      IQR = Q3 - Q1,
+      Lower_Bound = Q1 - 1.5 * IQR,
+      Upper_Bound = Q3 + 1.5 * IQR,
+      Is_Outlier = ifelse(!!sym(loss_col) < Lower_Bound | !!sym(loss_col) > Upper_Bound, 1, 0)) %>% ungroup()
+}
+
+# Apply the function
+country_clean <- iqr_outlier_detection(country_clean, "Country", "Loss")
+
+# Getting the outliers
+outlier_counts <- country_clean %>%
+  group_by(Country) %>%
+  summarise(Total_Outliers = sum(Is_Outlier, na.rm = TRUE)) %>%
+  arrange(desc(Total_Outliers)) %>%
+  filter(Total_Outliers > 0)
+
+print(outlier_counts)
+
+```
+
+These showcases the total number of outliers for Loss for each of the country. The highest outliers can be seen for United States and the least is seen for Africa and below.
+
+
+## Descriptive Statistics Between Outliers And Other Country-Level Metrics
+
+### Getting Total Cases And Percentage Of Outliers
+```{r}
+# Calculate the IQR for each country
+iqr_stats <- country_clean %>%
+  group_by(Country) %>%
+  summarise(
+    Q1 = quantile(Loss, 0.25, na.rm = TRUE),
+    Q3 = quantile(Loss, 0.75, na.rm = TRUE),
+    IQR = Q3 - Q1
+  ) %>%
+  mutate(
+    lower_bound = Q1 - 1.5 * IQR,
+    upper_bound = Q3 + 1.5 * IQR
+  )
+
+# Join with main dataset to label outliers
+country_outliers <- country_clean %>%
+  left_join(iqr_stats, by = "Country") %>%
+  mutate(
+    is_outlier = ifelse(Loss < lower_bound | Loss > upper_bound, 1, 0)
+  )
+
+# Count number of outliers per country
+outlier_counts <- country_outliers %>%
+  group_by(Country) %>%
+  summarise(
+    Total_Outliers = sum(is_outlier, na.rm = TRUE),
+    Total_Cases = n()
+  ) %>%
+  mutate(Outlier_Percentage = (Total_Outliers / Total_Cases) * 100) %>%
+  arrange(desc(Total_Outliers))
+
+# Display top 10 countries with most outliers
+head(outlier_counts, 10)
+
+```
+
+United States has the highest number of Total Outliers (8067). Despite having such high number of outliers the percentage of outliers is similar with others, which is 9.83%. This indicates that US experiences a high volume of loss incidents in general and not necessarily suffer from unusual spikes of extreme losses. China (10.28%), Italy (10.13%), and Spain (10.14%) have a higher percentage outliers then USA, this concludes that these countries have a slightly more frequent extreme losses then USA.
+
+## Visualizing Percentage of Outlier By Countries
+
+```{r}
+
+ggplot(outlier_counts %>% head(10), 
+       aes(x = reorder(Country, -Outlier_Percentage), y = Outlier_Percentage)) +
+  geom_bar(stat = "identity", fill = "red") +
+  geom_text(aes(label = sprintf("%.2f%%", Outlier_Percentage)), vjust = -0.5) +
+  ggtitle("Top 10 Countries with Highest Outlier Percentage") +
+  xlab("Country") +
+  ylab("Outlier Percentage %") +
+  theme_minimal()
+
+```
+
+This plot shows the percentage outliers for top 10 countries. China suffers the highest outlier percentage. This shows that the country experiences extreme loss events more frequently in relation to its total case. Even though in the statistics, we can see that U.S had the highest number of total outliers but its percentage outlier is only 9.83%. It is not the highest like that of China. This proves a point, where extreme losses occur at a similar rate as other countries. As for China, Spain, and Italy they have a slightly more frequent extreme loss events where they would have a greater tendency towards financial losses.
+
+
+
+### Loss Distribution per Country
+```{r}
+
+ggplot(country_outliers %>% filter(Country %in% head(outlier_counts$Country, 10)), 
+       aes(x = reorder(Country, Loss, median), y = Loss, fill = as.factor(is_outlier))) +
+  geom_boxplot(outlier.colour = "red", outlier.size = 2) +
+  ggtitle("Loss Distribution with Outliers by Country") +
+  xlab("Country") +
+  ylab("Loss Amount") +
+  scale_fill_manual(name = "Outlier Classification", 
+                    values = c("black", "red"), 
+                    labels = c("Normal", "Outlier")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+The box plot was used to to visualize the distribution of "Loss Amount" across top 10 countries with highest number of outliers. It distinguishes between normal loss values (black boxplots) and outliers (red boxplots). Outliers are substantially higher in loss amount where median loss for outliers (red) is significantly higher then that of normal transaction(black). The outliers show a wider range (longer whisker) indicating high variability. The structure of red boxplot is quite similar which shows a consistent trend. The red dots indicates individual extreme values present above China And "Unknown", this means that they had significant higher losses then others in the same group. In conclusion, overall outlier distribution is similar across countries which may indicate that the underlying issue may be systemic rather then region-specific.
+
+
+
+
+# Analysis Question 4: Does other factors effect extreme loss values?
+
+## Descriptive Statistics 
+```{r}
+# Merge `summary_stats` with `outlier_counts`
+country_features <- summary_stats %>%
+  left_join(outlier_counts, by = "Country")
+
+# Compute correlation matrix (excluding Country column)
+cor_matrix <- cor(country_features %>% select(-Country), use = "complete.obs")
+
+# Display correlation matrix
+print(cor_matrix)
+```
+
+### Correlation Between Outlier Frequency And Country Factors.
+
+```{r}
+
+# Visualize correlation heat map
+ggcorrplot(cor_matrix, method = "circle", lab = TRUE)
+
+```
+
+The visualization is a correlation matrix that shows pairwise correlation between different variables related to loss, outliers and case counts. The intensity of the color and size of the circles indicate the strength of the correlation. There is a high correlation between standard deviation and both average loss and median loss which suggests that as standard deviation of losses increases overall losses also increases. The low correlation between total outliers and total loss suggests that having a high number of outliers does not mean the total loss will be significantly impacted. The total cases and other loss related variable have zero correlation where having more cases does not necessarily result in higher losses.
+
+
+
+
+
+# Hypothesis Testing
+
+
+```{r}
+# Step 1: Ensure Date is in correct format
+country_clean$ <- as.Date(asm_data$Date)
+# Extract month and season
+asm_data <- asm_data %>%
+  mutate(
+    Month = month(Date, label = TRUE, abbr = TRUE),  # Extract month (Jan, Feb, etc.)
+    Season = case_when(
+      Month %in% c("Dec", "Jan", "Feb") ~ "Winter",
+      Month %in% c("Mar", "Apr", "May") ~ "Spring",
+      Month %in% c("Jun", "Jul", "Aug") ~ "Summer",
+      Month %in% c("Sep", "Oct", "Nov") ~ "Autumn",
+      TRUE ~ "Unknown"
+    )
+  )
+# Check unique months and seasons
+unique(asm_data$Month)
+unique(asm_data$Season)
+
+
+
+
+
+```
+
+

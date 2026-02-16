@@ -1,0 +1,339 @@
+---
+title: "Cleaning Loss Data"
+author: "Faiyad Mahabub Tasin"
+date: "2025-02-10"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Importing Libraries
+
+```{r libraries, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(moments)
+library(naniar)
+library(VIM)
+library(dplyr)
+library(missForest)
+library(gridExtra)
+```
+
+# Importing The Dataset
+
+```{r Importing the Dataset, echo=TRUE}
+
+setwd("C:/Asia Pacific University/All Module Notes/Semister-3/Programming For Data Analysis/Assignment/Data Description & Data")
+original_hacking_dataset <- read.csv("hackingData.csv")
+summary(original_hacking_dataset)
+```
+
+## Putting the data into a frame
+
+```{r}
+raw_data_frame <- data.frame(original_hacking_dataset)
+
+str(raw_data_frame)
+```
+
+## View the statistic of the hacking data as a whole
+
+```{r summary of the whole data, echo=TRUE}
+summary(raw_data_frame)
+```
+
+# Data Cleaning
+
+## Checking For Missing Values in the dataset
+
+```{r checking for missing values, echo=TRUE}
+missing_values <- colSums(is.na(raw_data_frame))
+missing_values
+```
+
+## Understanding Data Behaviors For Loss Column
+
+### View Statistical Summary For Loss Column
+
+```{r summary statistics for Loss Column, echo=TRUE}
+summary(raw_data_frame$Loss)
+```
+
+### Checking the distribution of Loss
+
+```{r}
+skew_p1 <- ggplot(raw_data_frame, aes(x = Loss)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "lightblue", color = "black") +
+  geom_density(color = "orange", linewidth = 1) +
+  labs(title = "Distribution of Loss",
+       subtitle = paste("Skewness:", round(skewness(raw_data_frame$Loss, na.rm = TRUE), 3)),
+       x = "Loss",
+       y = "Density") +
+  theme_minimal()
+print(skew_p1)
+```
+
+
+### Checking number of outliers
+
+```{r}
+Q1 <- quantile(raw_data_frame$Loss, 0.25, na.rm = TRUE)
+Q3 <- quantile(raw_data_frame$Loss, 0.75, na.rm = TRUE)
+IQR_Value <- Q3 - Q1
+IQR_outliers_before <- sum(raw_data_frame$Loss < (Q1 - 1.5 * IQR_Value) | raw_data_frame$Loss > (Q3 + 1.5 * IQR_Value), na.rm = TRUE)
+
+cat("The Number of outliers for Loss (IQR method):", IQR_outliers_before, "\n")
+```
+
+## Visualization for outliers
+
+```{r}
+ggplot(raw_data_frame, aes(y = Loss)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Loss")
+theme_minimal()
+```
+
+### Calculating percentage of missing values for Loss
+
+```{r}
+missing_Loss_percentage <- (sum(is.na(original_hacking_dataset$Loss)) / length(original_hacking_dataset$Loss)) * 100
+
+missing_Loss_percentage
+```
+
+
+
+### Running MCAR Test
+
+```{r MCAR Test, echo=TRUE}
+mcar_test(raw_data_frame)
+```
+
+
+
+## Cleaning Loss Column
+
+### Imputation Method using Random Forest
+
+#### Changing Date "chr" into "Date" format
+
+```{r}
+raw_data_frame$Date <- as.Date(raw_data_frame$Date, format="%d/%m/%Y")
+str(raw_data_frame)
+```
+
+### Changing Date into numeric form and inserting new column in the dataset as Date_numeric for carrying out spearman rank correlation testing.
+
+```{r}
+raw_data_frame$Date_numeric <- as.numeric(raw_data_frame$Date)
+str(raw_data_frame)
+```
+
+## Checking Correlation For Using Random Forest
+
+### Checking Correlation of Loss VS Date
+
+```{r}
+Loss_Date <- cor(raw_data_frame$Date_numeric, raw_data_frame$Loss, method = "spearman", use = "complete.obs")
+Loss_Date
+```
+
+### Checking Correlation between Loss vs Downtime
+
+```{r}
+Loss_Downtime <- cor(raw_data_frame$DownTime, raw_data_frame$Loss, method = "spearman", use = "complete.obs")
+Loss_Downtime
+```
+
+### Checking Correlation between Loss vs Ransom
+
+```{r}
+Loss_Ransom <- cor(raw_data_frame$Ransom, raw_data_frame$Loss, method = "spearman", use = "complete.obs")
+Loss_Ransom
+```
+
+### Checking Percentage of Data Missing For Ransom
+
+```{r}
+missing_values_percentage <- (sum(is.na(original_hacking_dataset$Ransom)) / length(original_hacking_dataset$Loss)) * 100
+missing_values_percentage
+```
+
+### Random Forest Imputation
+
+```{r}
+data_rf <- missForest(raw_data_frame[, c("Loss", "DownTime", "Date_numeric")])
+summary(data_rf$ximp$Loss)
+```
+
+### Checking error for Random Forest
+
+```{r}
+print("OOB Error Estimate:")
+print(data_rf$OOBerror)
+view(raw_data_frame)
+```
+
+
+
+### Putting the imputed Loss to the Original Loss data
+
+```{r}
+raw_data_frame$Loss <- data_rf$ximp$Loss
+summary(raw_data_frame$Loss)
+```
+
+### Putting the imputted data into a different vector for better accessibility
+
+```{r}
+impute_data <- raw_data_frame
+str(impute_data)
+```
+
+### Removing Date_numeric from imputed data as it is not needed
+
+```{r}
+impute_data$Date_numeric <- NULL
+str(impute_data)
+```
+
+### Calculating numbers of outliers after imputation
+
+```{r}
+Q1 <- quantile(impute_data$Loss, 0.25, na.rm = TRUE)
+Q3 <- quantile(impute_data$Loss, 0.75, na.rm = TRUE)
+IQR_Value <- Q3 - Q1
+IQR_outliers <- sum(impute_data$Loss < (Q1 - 1.5 * IQR_Value) | impute_data$Loss > (Q3 + 1.5 * IQR_Value), na.rm = TRUE)
+
+cat("The Number of outliers for Loss (IQR method):", IQR_outliers, "\n")
+```
+
+### Visualization for outliers after imputation
+
+```{r}
+ggplot(impute_data, aes(y = Loss)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Loss After Imputation")
+theme_minimal()
+```
+
+### Visualization of Skewness After Imputation
+
+```{r}
+p1 <- ggplot(raw_data_frame, aes(x = Loss)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "lightblue", color = "black") +
+  geom_density(color = "orange", linewidth = 1) +
+  labs(title = "Distribution of Loss After Imputation Of Random Forest",
+       subtitle = paste("Skewness:", round(skewness(raw_data_frame$Loss, na.rm = TRUE), 3)),
+       x = "Loss",
+       y = "Density") +
+  theme_minimal()
+print(p1)
+```
+
+### Skewness Comparison
+
+```{r}
+data_mean <- original_hacking_dataset
+data_mean$Loss[is.na(data_mean$Loss)] <- mean(data_mean$Loss, na.rm = TRUE)
+
+data_median <- original_hacking_dataset
+data_median$Loss[is.na(data_median$Loss)] <- median(data_median$Loss, na.rm = TRUE)
+
+cat("Skewness Comparison:\n",
+    "1. Original data (excluding NA): ", skewness(original_hacking_dataset$Loss, na.rm = TRUE), "\n",
+    "2. Mean imputation: ", skewness(data_mean$Loss), "\n", 
+    "3. Median imputation: ", skewness(data_median$Loss), "\n",
+    "4. After Random Forest imputation: ", skewness(data_rf$ximp$Loss), "\n")
+```
+
+
+
+# Data Transformation
+
+## Transforming Empty Strings of Missing Rows to "NA" for every variables used according to our objective
+
+### Data Structure Before Imputation
+
+```{r}
+summary(raw_data_frame)
+view(raw_data_frame)
+```
+
+### Data Structure After Imputation
+
+```{r}
+summary(impute_data)
+view(impute_data)
+```
+
+### Data Structure After Imputting "NA" values
+
+```{r}
+impute_data$Country[impute_data$Country == ""] <- "Unknown"
+impute_data$OS[impute_data$OS == ""] <- NA
+impute_data$WebServer[impute_data$WebServer == ""] <- NA
+
+summary(impute_data)
+view(impute_data)
+```
+
+### Reducing Loss to one decimal places
+
+```{r}
+impute_data$Loss <- round(impute_data$Loss, 1)
+view(impute_data)
+```
+
+
+
+# Data Validation
+
+## Checking Missing Values after imputation and adding "NA's"
+
+### Missing Values For Country
+
+```{r}
+before_missing_Country <- sum(is.na(raw_data_frame$Country))
+cat("Before putting NA values : ",  before_missing_Country)
+
+after_missing_Country <- sum(is.na(impute_data$Country))
+cat("\nAfter putting NA values: ", after_missing_Country)
+```
+
+### Missing Values For OS
+
+```{r}
+before_missing_OS <- sum(is.na(raw_data_frame$OS))
+cat("Before putting NA values : ", before_missing_OS)
+
+after_missing_OS <- sum(is.na(impute_data$OS))
+cat("\nAfter putting NA values: ", after_missing_OS)
+```
+
+### Missing Values For Webserver
+
+```{r}
+before_missing_Webserver <- sum(is.na(raw_data_frame$WebServer))
+cat("Before putting NA values : ",  before_missing)
+
+after_missing_Webserver <- sum(is.na(impute_data$WebServer))
+cat("\nAfter putting NA values: ", after_missing_Webserver)
+```
+
+### Seeing the structure of the imputed dataset
+
+```{r}
+summary(impute_data)
+str(impute_data)
+```
+
+### Extracting The Dataset
+
+```{r}
+write.csv(impute_data, "hackingData.csv", row.names = FALSE)
+```
