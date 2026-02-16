@@ -20,7 +20,6 @@ A comprehensive data analytics project examining cybersecurity patterns and fina
 
 This project leverages data analysis techniques to examine cyberattack trends spanning 15 years of web-based security incidents. Using R programming, we investigate relationships between attack vectors, system vulnerabilities, and financial losses to provide actionable insights for improving cybersecurity defenses.
 
-**Academic Context:** Final Year Project (50% weightage) for BSc Data Analytics, Asia Pacific University of Technology & Innovation.
 
 ## Dataset
 
