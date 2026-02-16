@@ -197,8 +197,6 @@ web-hacking-trends-analysis/
 | Lau Wei Wen | TP079439 | Downtime Analysis |
 | Yuke Liew Nyuk Kee | TP079074 | Web Server Analysis, Introduction |
 
-**Lecturer**: Dr. Kulothunkan A/L Palasundram
-
 **Institution**: Asia Pacific University of Technology & Innovation
 
 ## License
@@ -212,7 +210,3 @@ This project is submitted as academic coursework for CT127-3-2-PFDA (Programming
 - Open-source R community for package development
 
 ---
-
-**Submission Date**: February 16, 2025  
-**Module Code**: CT127-3-2-PFDA  
-**Intake**: APU2F2411IT(DA)
