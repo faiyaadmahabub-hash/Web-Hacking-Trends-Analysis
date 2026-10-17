@@ -1,212 +1,58 @@
-# Web Hacking Trends Analysis
+# Web defacement trends: R group analysis
 
-A comprehensive data analytics project examining cybersecurity patterns and financial impacts of web defacement incidents over a 15-year period (1998-2015).
+An Asia Pacific University Programming for Data Analysis group project exploring how reported web-defacement incidents relate to country, operating system, web server and downtime. The retained R/R Markdown source covers cleaning, imputation, aggregation, charts and statistical comparisons; an 80-page report preserves the original analysis.
 
-## Table of Contents
+**Status:** historical coursework source and report. The incident dataset and intermediate cleaned CSV are absent, so the analysis cannot run end to end from this clone. The country R Markdown file also has an existing syntax error. Offline R checks identify that blocker and execute one original helper on synthetic input; they do not reproduce the report's findings.
 
-- [About the Project](#about-the-project)
-- [Dataset](#dataset)
-- [Research Objectives](#research-objectives)
-- [Key Findings](#key-findings)
-- [Technologies Used](#technologies-used)
-- [Installation](#installation)
-- [Project Structure](#project-structure)
-- [Analysis Methodology](#analysis-methodology)
-- [Results](#results)
-- [Contributors](#contributors)
-- [License](#license)
+![Historical country-level chart from the group report](docs/assets/historical-country-analysis.png)
 
-## About the Project
+*Original report Figure 6.9, page 36, rendered without changes to its plotted values. This is historical evidence, not a new analysis. Counts and loss annotations use different units; the picture should not be read as a common-scale quantitative comparison.*
 
-This project leverages data analysis techniques to examine cyberattack trends spanning 15 years of web-based security incidents. Using R programming, we investigate relationships between attack vectors, system vulnerabilities, and financial losses to provide actionable insights for improving cybersecurity defenses.
+## Workflow represented by the source
 
-
-## Dataset
-
-The dataset comprises 212,093 observations across 12 variables documenting website defacement incidents:
-
-| Variable | Type | Description |
-|----------|------|-------------|
-| Date | Date | Incident occurrence date |
-| Notify | Character | Person/group reporting the incident |
-| URL | Character | Compromised server URL |
-| IP | Character | IP address of affected server |
-| Country | Character | Server location |
-| OS | Character | Operating system |
-| WebServer | Character | Web server version |
-| Encoding | Character | Character encoding used |
-| Lang | Character | Website language |
-| Ransom | Integer | Ransom amount paid (thousands) |
-| DownTime | Integer | Downtime duration (days) |
-| Loss | Numeric | Revenue loss incurred |
-
-## Research Objectives
-
-1. **Geographic Analysis**: Investigate relationships between country and financial losses
-2. **Operating System Security**: Examine OS vulnerabilities and their correlation with losses
-3. **Downtime Impact**: Analyze the correlation between downtime duration and financial damage
-4. **Web Server Vulnerabilities**: Determine if web server versions affect attack outcomes
-
-## Key Findings
-
-### Geographic Distribution
-- United States experienced highest total loss ($225.8M) with 82,052 attacks
-- Linux systems most vulnerable with $358.7M in aggregate losses
-- Attack frequency doesn't always correlate with loss severity
-
-### Operating System Vulnerabilities
-- Linux: $358.7M total losses (highest)
-- Windows Server 2003: $57M losses
-- Peak loss periods: 2010 ($110M) and 2013 ($130M)
-- Most systems lack security patches
-
-### Downtime-Loss Relationship
-- Critical downtimes (24+ hours): $540.7M across 145,086 events
-- Average loss per critical outage: $3,727
-- Extended downtimes (5-24 hours): $45.2M across 67,007 events
-- Positive correlation between downtime duration and financial loss
-
-### Web Server Analysis
-- Apache servers: 55.9% market share, $315.7M losses (highest)
-- IIS servers: 14.5% market share, $82.5M losses
-- Seasonal patterns observed with peaks in October
-- Autumn season shows highest financial impact
-
-## Technologies Used
-
-- **R** (v4.0+)
-- **Libraries**:
-  - `dplyr` - Data manipulation
-  - `ggplot2` - Data visualization
-  - `tidyr` - Data tidying
-  - `stringr` - String operations
-  - `lubridate` - Date handling
-  - `scales` - Visualization scaling
-  - `missForest` - Missing data imputation
-  - `rgeolocate` - IP geolocation
-  - `corrplot` - Correlation matrices
-  - `ggcorrplot` - Enhanced correlation plots
-
-## Installation
-
-### Prerequisites
-
-```r
-# Install required packages
-install.packages(c(
-  "dplyr", "ggplot2", "tidyr", "stringr", 
-  "scales", "lubridate", "corrplot", 
-  "ggcorrplot", "missForest", "rgeolocate"
-))
+```mermaid
+flowchart LR
+    A[External hackingData.csv] --> B[Loss inspection and random-forest imputation]
+    B --> C[External Clean_Loss_Data.csv]
+    C --> D[Country normalization and GeoLite lookup]
+    C --> E[OS normalization]
+    C --> F[Downtime categories]
+    C --> G[Web-server normalization]
+    D --> H[Aggregates / visualizations / statistical analysis]
+    E --> H
+    F --> H
+    G --> H
 ```
 
-### Setup
+The work demonstrates R data wrangling and visualization, rather than a live security-monitoring service. Loss cleaning uses `missForest` with Loss, DownTime and a numeric date. Country cleanup combines explicit name mappings and IP geolocation. The other scripts normalize OS/web-server categories and compare downtime groups.
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/web-hacking-trends-analysis.git
-cd web-hacking-trends-analysis
+## Files and contribution scope
+
+| Contributor | Retained source |
+|---|---|
+| Faiyad Mahabub Tasin | `Faiyad (TP077983) Loss Cleaning.Rmd`; `Faiyad (TP077983) Country Clean & EDA.Rmd` |
+| Emmanuel Naranendhya Tyatan | `Emmanuel Naranendhya Tyatan - TP078574 (OS Analysis).R` |
+| Lau Wei Wen | `Lau Wei Wen TP079439.R` (downtime) |
+| Yuke Liew Nyuk Kee | `Yuke Liew Nyuk Kee TP079074.R` (web servers) |
+
+These scopes follow the actual filenames/source. The report records shared group responsibility; the portfolio does not claim individual ownership of the entire analysis. Read the [original group report](PFDA%20Group%20Assignment%20-%20Group15%20%282%29.pdf) for the historical findings.
+
+## Run the safe offline check
+
+With R installed, from the repository root:
+
+```powershell
+Rscript --vanilla docs/verify_sources.R
 ```
 
-2. Load the dataset:
-```r
-raw_data <- read.csv("hackingData.csv")
-```
+The check inventories packages, parses all three `.R` scripts, extracts/parses both R Markdown code streams, executes the original OS mode helper on synthetic values and lists missing inputs. The current check exits **1** because the country notebook contains `country_clean$ <- as.Date(asm_data$Date)` at line 565. This is a known source failure, not a passing full analysis. See [VERIFICATION.md](docs/VERIFICATION.md) for exact results.
 
-3. Run the analysis scripts in sequence:
-```r
-source("data_preparation.R")
-source("analysis.R")
-```
+For full reproduction, first obtain the authorized incident data and GeoLite database, configure source working directories, resolve the incomplete country assignment and install the source's package requirements. Review interactive `View` calls, in-script `install.packages` calls and output paths before sourcing scripts. They assume RStudio and several contributors' local Windows/macOS directories. There is no unified runner or environment lockfile.
 
-## Project Structure
+## How to interpret the report
 
-```
-web-hacking-trends-analysis/
-│
-├── data/
-│   ├── hackingData.csv              # Raw dataset
-│   └── Clean_Loss_Data.csv          # Processed dataset
-│
-├── scripts/
-│   ├── data_preparation.R           # Data cleaning and preprocessing
-│   ├── country_analysis.R           # Geographic analysis
-│   ├── os_analysis.R                # Operating system analysis
-│   ├── downtime_analysis.R          # Downtime correlation analysis
-│   └── webserver_analysis.R         # Web server vulnerability analysis
-│
-├── outputs/
-│   ├── figures/                     # Generated visualizations
-│   └── results/                     # Statistical outputs
-│
-├── docs/
-│   └── PFDA_Group_Assignment_Group15.pdf  # Full report
-│
-└── README.md
-```
+The report describes 212,093 incident observations. Because the CSVs are not retained, this count and its financial totals cannot be checked locally. The archive supports inspection of the original methods and charts, not a fresh measurement of attack frequency or monetary loss.
 
-## Analysis Methodology
+A high count or aggregate loss for an OS/server is not proof that it is intrinsically more vulnerable: exposure, installed base, reporting and imputation all matter. Dataset shares are not market shares. Units for downtime and loss need reconciliation across the original documentation and plots. Statistical associations should not be described as causal effects, and imputing Loss introduces additional uncertainty.
 
-### Data Preparation
-
-1. **Missing Value Treatment**:
-   - Loss variable: 16% missing, imputed using Random Forest
-   - MCAR testing performed (p < 0.05)
-   - Correlation analysis with Date and Downtime
-
-2. **Data Cleaning**:
-   - Standardized country names
-   - IP address formatting (IPv4/IPv6)
-   - Geolocation imputation using MaxMind GeoLite2
-   - OS and WebServer normalization
-   - Outlier detection using IQR method
-
-3. **Feature Engineering**:
-   - Date parsing and temporal feature extraction
-   - Categorical variable standardization
-   - Duplicate removal
-
-### Statistical Analysis
-
-- **Generalized Linear Model (GLM)**: Testing relationships between Loss and independent variables
-- **Correlation Analysis**: Spearman and Pearson methods
-- **Temporal Analysis**: Year-over-year and seasonal trend analysis
-- **Outlier Analysis**: IQR-based detection and impact assessment
-
-## Results
-
-### Hypothesis Testing (GLM)
-
-**Null Hypothesis (H₀)**: No significant combined relationship between independent variables (Month, Year, Season, OS, WebServer, Country, Downtime) and Loss.
-
-**Findings**:
-- Month^8: p = 0.0101 (Significant)
-- Creston XPanel Control System: p = 0.0046 (Significant)
-- Host Install NginX: p = 0.0029 (Highly Significant)
-- Specific web servers show significant impact on losses
-- Year and Country show no strong influence
-
-**Conclusion**: Reject null hypothesis. Seasonal trends, specific OS configurations, and web server setups significantly impact financial losses.
-
-## Contributors
-
-| Name | Student ID | Role |
-|------|-----------|------|
-| Faiyad Mahabub Tasin | TP077983 | Team Leader, Country Analysis |
-| Emmanuel Naranendhya Tyatan | TP077873 | OS Analysis, Data Preparation |
-| Lau Wei Wen | TP079439 | Downtime Analysis |
-| Yuke Liew Nyuk Kee | TP079074 | Web Server Analysis, Introduction |
-
-**Institution**: Asia Pacific University of Technology & Innovation
-
-## License
-
-This project is submitted as academic coursework for CT127-3-2-PFDA (Programming for Data Analysis). All rights reserved by the contributors and Asia Pacific University.
-
-## Acknowledgments
-
-- MaxMind for GeoLite2 geolocation database
-- Asia Pacific University for academic guidance
-- Open-source R community for package development
-
----
+The [archived project guide](docs/PROJECT_GUIDE.md) preserves the former README with a warning about its obsolete file layout and unverified claims. No LICENSE file or incident-data redistribution terms are included; contributor and dataset rights still apply. No incident-level URLs, IPs or synthetic data masquerading as real evidence have been added.
